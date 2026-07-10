@@ -2,6 +2,11 @@
 
 Natural-language → SQL agent over a 12-table banking warehouse (~200K rows, 80K+ transactions). Schema-aware RAG with curated few-shots, AST-level SQL safety guards, hallucination detection, and retry. FastAPI + Streamlit.
 
+
+## Demo
+
+![Application Demo](assets/demo.png)
+
 ## Stack
 Python · FastAPI · PostgreSQL 16 · LangChain · OpenAI GPT-4 · ChromaDB · Streamlit · sqlglot
 
