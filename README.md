@@ -5,7 +5,7 @@ Natural-language → SQL agent over a 12-table banking warehouse (~200K rows, 80
 
 ## Demo
 
-![Application Demo](assets/demo.png)
+![Application Demo](app/assets/demo.png)
 
 ## Stack
 Python · FastAPI · PostgreSQL 16 · LangChain · OpenAI GPT-4 · ChromaDB · Streamlit · sqlglot
