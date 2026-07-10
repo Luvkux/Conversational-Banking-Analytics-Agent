@@ -1,0 +1,212 @@
+[
+  {
+    "id": "fs01",
+    "category": "single_table_count",
+    "question": "How many customers do we have?",
+    "sql": "SELECT COUNT(*) AS total_customers FROM customers;"
+  },
+  {
+    "id": "fs02",
+    "category": "single_table_filter",
+    "question": "How many active accounts are there?",
+    "sql": "SELECT COUNT(*) AS active_accounts FROM accounts WHERE status = 'active';"
+  },
+  {
+    "id": "fs03",
+    "category": "group_by",
+    "question": "Number of customers by occupation",
+    "sql": "SELECT occupation, COUNT(*) AS n FROM customers GROUP BY occupation ORDER BY n DESC;"
+  },
+  {
+    "id": "fs04",
+    "category": "group_by_with_sum",
+    "question": "Total balance across all active accounts, broken down by product type",
+    "sql": "SELECT p.product_type, SUM(a.current_balance) AS total_balance, COUNT(*) AS n_accounts FROM accounts a JOIN products p ON a.product_id = p.product_id WHERE a.status = 'active' GROUP BY p.product_type ORDER BY total_balance DESC;"
+  },
+  {
+    "id": "fs05",
+    "category": "join_2_tables",
+    "question": "List the top 10 customers by their total deposit account balance",
+    "sql": "SELECT c.customer_id, c.full_name, SUM(a.current_balance) AS total_balance FROM customers c JOIN accounts a ON c.customer_id = a.customer_id WHERE a.status = 'active' GROUP BY c.customer_id, c.full_name ORDER BY total_balance DESC LIMIT 10;"
+  },
+  {
+    "id": "fs06",
+    "category": "date_filter_relative",
+    "question": "How many transactions happened in the last 30 days?",
+    "sql": "SELECT COUNT(*) AS n_transactions FROM transactions WHERE txn_date >= CURRENT_DATE - INTERVAL '30 days' AND status = 'success';"
+  },
+  {
+    "id": "fs07",
+    "category": "date_filter_absolute",
+    "question": "Total transaction volume in Q1 2025",
+    "sql": "SELECT SUM(amount) AS total_volume FROM transactions WHERE txn_date >= '2025-01-01' AND txn_date < '2025-04-01' AND status = 'success';"
+  },
+  {
+    "id": "fs08",
+    "category": "month_aggregate",
+    "question": "Monthly transaction volume in 2024",
+    "sql": "SELECT DATE_TRUNC('month', txn_date) AS month, SUM(amount) AS volume, COUNT(*) AS n_txn FROM transactions WHERE txn_date >= '2024-01-01' AND txn_date < '2025-01-01' AND status = 'success' GROUP BY 1 ORDER BY 1;"
+  },
+  {
+    "id": "fs09",
+    "category": "join_3_tables",
+    "question": "Total successful transaction volume by branch region",
+    "sql": "SELECT b.region, SUM(t.amount) AS total_volume FROM transactions t JOIN accounts a ON t.account_id = a.account_id JOIN branches b ON a.branch_id = b.branch_id WHERE t.status = 'success' GROUP BY b.region ORDER BY total_volume DESC;"
+  },
+  {
+    "id": "fs10",
+    "category": "join_3_tables_filter",
+    "question": "Average transaction amount by spending category, only for debits",
+    "sql": "SELECT tc.name AS category, AVG(t.amount) AS avg_amount, COUNT(*) AS n FROM transactions t JOIN transaction_categories tc ON t.category_id = tc.category_id WHERE t.txn_type = 'debit' AND t.status = 'success' GROUP BY tc.name ORDER BY avg_amount DESC;"
+  },
+  {
+    "id": "fs11",
+    "category": "having",
+    "question": "Which customers have more than 5 active accounts?",
+    "sql": "SELECT c.customer_id, c.full_name, COUNT(a.account_id) AS n_accounts FROM customers c JOIN accounts a ON c.customer_id = a.customer_id WHERE a.status = 'active' GROUP BY c.customer_id, c.full_name HAVING COUNT(a.account_id) > 5 ORDER BY n_accounts DESC;"
+  },
+  {
+    "id": "fs12",
+    "category": "ratio_aggregate",
+    "question": "Failed transaction rate by channel",
+    "sql": "SELECT channel, ROUND(100.0 * SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) / COUNT(*), 2) AS failed_pct, COUNT(*) AS total FROM transactions GROUP BY channel ORDER BY failed_pct DESC;"
+  },
+  {
+    "id": "fs13",
+    "category": "ratio_aggregate",
+    "question": "Conversion rate by campaign",
+    "sql": "SELECT c.campaign_id, c.name, ROUND(100.0 * SUM(CASE WHEN cc.subscribed THEN 1 ELSE 0 END) / COUNT(*), 2) AS conversion_pct, COUNT(*) AS n_contacts FROM campaigns c JOIN campaign_contacts cc ON c.campaign_id = cc.campaign_id GROUP BY c.campaign_id, c.name ORDER BY conversion_pct DESC;"
+  },
+  {
+    "id": "fs14",
+    "category": "campaign_segmentation",
+    "question": "Which target segment converted best across all campaigns?",
+    "sql": "SELECT c.target_segment, ROUND(100.0 * SUM(CASE WHEN cc.subscribed THEN 1 ELSE 0 END) / COUNT(*), 2) AS conversion_pct, COUNT(*) AS n_contacts FROM campaigns c JOIN campaign_contacts cc ON c.campaign_id = cc.campaign_id GROUP BY c.target_segment ORDER BY conversion_pct DESC;"
+  },
+  {
+    "id": "fs15",
+    "category": "subquery_in",
+    "question": "Customers who have subscribed to any campaign",
+    "sql": "SELECT c.customer_id, c.full_name FROM customers c WHERE c.customer_id IN (SELECT DISTINCT customer_id FROM campaign_contacts WHERE subscribed = TRUE);"
+  },
+  {
+    "id": "fs16",
+    "category": "subquery_not_in",
+    "question": "Customers who were contacted but never subscribed in any campaign",
+    "sql": "SELECT DISTINCT c.customer_id, c.full_name FROM customers c JOIN campaign_contacts cc ON c.customer_id = cc.customer_id WHERE c.customer_id NOT IN (SELECT customer_id FROM campaign_contacts WHERE subscribed = TRUE);"
+  },
+  {
+    "id": "fs17",
+    "category": "exists_correlated",
+    "question": "Customers who hold both a credit card and at least one active loan",
+    "sql": "SELECT c.customer_id, c.full_name FROM customers c WHERE EXISTS (SELECT 1 FROM credit_cards cc WHERE cc.customer_id = c.customer_id AND cc.status = 'active') AND EXISTS (SELECT 1 FROM loans l WHERE l.customer_id = c.customer_id AND l.status = 'active');"
+  },
+  {
+    "id": "fs18",
+    "category": "cte_segmentation",
+    "question": "High-value customers — those with total deposit balance above ₹500,000 — and how many cards they hold",
+    "sql": "WITH high_value AS (SELECT customer_id, SUM(current_balance) AS total_bal FROM accounts WHERE status = 'active' GROUP BY customer_id HAVING SUM(current_balance) > 500000) SELECT hv.customer_id, c.full_name, hv.total_bal, COUNT(cc.card_id) AS n_cards FROM high_value hv JOIN customers c ON hv.customer_id = c.customer_id LEFT JOIN credit_cards cc ON cc.customer_id = hv.customer_id GROUP BY hv.customer_id, c.full_name, hv.total_bal ORDER BY hv.total_bal DESC;"
+  },
+  {
+    "id": "fs19",
+    "category": "window_rank",
+    "question": "Top 3 branches by total balance in each region",
+    "sql": "WITH br AS (SELECT b.region, b.branch_id, b.name, SUM(a.current_balance) AS total_bal FROM branches b JOIN accounts a ON b.branch_id = a.branch_id WHERE a.status = 'active' GROUP BY b.region, b.branch_id, b.name), ranked AS (SELECT *, RANK() OVER (PARTITION BY region ORDER BY total_bal DESC) AS rnk FROM br) SELECT region, name, total_bal FROM ranked WHERE rnk <= 3 ORDER BY region, rnk;"
+  },
+  {
+    "id": "fs20",
+    "category": "window_running_sum",
+    "question": "Cumulative monthly transaction volume in 2024",
+    "sql": "WITH monthly AS (SELECT DATE_TRUNC('month', txn_date) AS month, SUM(amount) AS volume FROM transactions WHERE txn_date >= '2024-01-01' AND txn_date < '2025-01-01' AND status = 'success' GROUP BY 1) SELECT month, volume, SUM(volume) OVER (ORDER BY month) AS cumulative FROM monthly ORDER BY month;"
+  },
+  {
+    "id": "fs21",
+    "category": "age_buckets",
+    "question": "Number of customers in each age bucket: <30, 30-44, 45-59, 60+",
+    "sql": "SELECT CASE WHEN age < 30 THEN '<30' WHEN age < 45 THEN '30-44' WHEN age < 60 THEN '45-59' ELSE '60+' END AS age_bucket, COUNT(*) AS n FROM customers GROUP BY 1 ORDER BY 1;"
+  },
+  {
+    "id": "fs22",
+    "category": "demographics_x_product",
+    "question": "Average annual income of customers who have a home loan, vs those who don't",
+    "sql": "SELECT CASE WHEN EXISTS (SELECT 1 FROM loans l JOIN products p ON l.product_id = p.product_id WHERE l.customer_id = c.customer_id AND p.product_type = 'home_loan') THEN 'has_home_loan' ELSE 'no_home_loan' END AS segment, ROUND(AVG(annual_income), 2) AS avg_income, COUNT(*) AS n FROM customers c GROUP BY 1;"
+  },
+  {
+    "id": "fs23",
+    "category": "loan_portfolio",
+    "question": "Total outstanding loan principal by product type",
+    "sql": "SELECT p.product_type, SUM(l.principal) AS total_principal, COUNT(*) AS n_loans FROM loans l JOIN products p ON l.product_id = p.product_id WHERE l.status IN ('active', 'overdue') GROUP BY p.product_type ORDER BY total_principal DESC;"
+  },
+  {
+    "id": "fs24",
+    "category": "default_rate",
+    "question": "Loan default rate by product type",
+    "sql": "SELECT p.product_type, ROUND(100.0 * SUM(CASE WHEN l.status = 'defaulted' THEN 1 ELSE 0 END) / COUNT(*), 2) AS default_pct, COUNT(*) AS total_loans FROM loans l JOIN products p ON l.product_id = p.product_id GROUP BY p.product_type ORDER BY default_pct DESC;"
+  },
+  {
+    "id": "fs25",
+    "category": "credit_utilization",
+    "question": "Average credit card utilization for active cards by customer age bucket",
+    "sql": "SELECT CASE WHEN c.age < 30 THEN '<30' WHEN c.age < 45 THEN '30-44' WHEN c.age < 60 THEN '45-59' ELSE '60+' END AS age_bucket, ROUND(AVG(cc.current_balance / NULLIF(cc.credit_limit, 0)) * 100, 2) AS avg_utilization_pct, COUNT(*) AS n_cards FROM credit_cards cc JOIN customers c ON cc.customer_id = c.customer_id WHERE cc.status = 'active' GROUP BY 1 ORDER BY 1;"
+  },
+  {
+    "id": "fs26",
+    "category": "channel_mix",
+    "question": "What percentage of total transaction volume comes from each channel?",
+    "sql": "SELECT channel, ROUND(100.0 * SUM(amount) / SUM(SUM(amount)) OVER (), 2) AS pct_volume, SUM(amount) AS volume FROM transactions WHERE status = 'success' GROUP BY channel ORDER BY pct_volume DESC;"
+  },
+  {
+    "id": "fs27",
+    "category": "top_n_per_category",
+    "question": "Top 3 merchants by total transaction amount in each spending category",
+    "sql": "WITH merchant_totals AS (SELECT tc.name AS category, t.merchant, SUM(t.amount) AS total FROM transactions t JOIN transaction_categories tc ON t.category_id = tc.category_id WHERE t.status = 'success' AND t.merchant IS NOT NULL GROUP BY tc.name, t.merchant), ranked AS (SELECT *, RANK() OVER (PARTITION BY category ORDER BY total DESC) AS rnk FROM merchant_totals) SELECT category, merchant, total FROM ranked WHERE rnk <= 3 ORDER BY category, rnk;"
+  },
+  {
+    "id": "fs28",
+    "category": "deposit_book",
+    "question": "Total active FD principal by term length",
+    "sql": "SELECT term_months, SUM(principal) AS total_principal, COUNT(*) AS n_deposits, ROUND(AVG(interest_rate), 2) AS avg_rate FROM deposits WHERE status = 'active' GROUP BY term_months ORDER BY term_months;"
+  },
+  {
+    "id": "fs29",
+    "category": "cohort_aging",
+    "question": "How many customers were onboarded each quarter?",
+    "sql": "SELECT DATE_TRUNC('quarter', onboarded_at) AS quarter, COUNT(*) AS new_customers FROM customers GROUP BY 1 ORDER BY 1;"
+  },
+  {
+    "id": "fs30",
+    "category": "cross_product_concentration",
+    "question": "Customers holding products across all three: deposit account, loan, and credit card",
+    "sql": "SELECT c.customer_id, c.full_name FROM customers c WHERE EXISTS (SELECT 1 FROM accounts a WHERE a.customer_id = c.customer_id AND a.status = 'active') AND EXISTS (SELECT 1 FROM loans l WHERE l.customer_id = c.customer_id AND l.status = 'active') AND EXISTS (SELECT 1 FROM credit_cards cc WHERE cc.customer_id = c.customer_id AND cc.status = 'active');"
+  },
+  {
+    "id": "fs31",
+    "category": "branch_performance",
+    "question": "Branch with the highest total balance under management",
+    "sql": "SELECT b.branch_id, b.name, b.city, SUM(a.current_balance) AS aum FROM branches b JOIN accounts a ON b.branch_id = a.branch_id WHERE a.status = 'active' GROUP BY b.branch_id, b.name, b.city ORDER BY aum DESC LIMIT 1;"
+  },
+  {
+    "id": "fs32",
+    "category": "dormancy",
+    "question": "Accounts that have had no transaction in the last 180 days",
+    "sql": "SELECT a.account_id, a.account_number, a.current_balance, MAX(t.txn_date) AS last_txn FROM accounts a LEFT JOIN transactions t ON a.account_id = t.account_id WHERE a.status = 'active' GROUP BY a.account_id, a.account_number, a.current_balance HAVING MAX(t.txn_date) < CURRENT_DATE - INTERVAL '180 days' OR MAX(t.txn_date) IS NULL ORDER BY last_txn NULLS FIRST;"
+  },
+  {
+    "id": "fs33",
+    "category": "campaign_channel_x_objective",
+    "question": "Conversion rate by campaign channel and objective",
+    "sql": "SELECT c.channel, c.objective, ROUND(100.0 * SUM(CASE WHEN cc.subscribed THEN 1 ELSE 0 END) / COUNT(*), 2) AS conversion_pct, COUNT(*) AS n FROM campaigns c JOIN campaign_contacts cc ON c.campaign_id = cc.campaign_id GROUP BY c.channel, c.objective ORDER BY conversion_pct DESC;"
+  },
+  {
+    "id": "fs34",
+    "category": "income_segmentation",
+    "question": "Average current balance by customer income decile",
+    "sql": "WITH deciles AS (SELECT c.customer_id, NTILE(10) OVER (ORDER BY c.annual_income) AS income_decile FROM customers c) SELECT d.income_decile, ROUND(AVG(a.current_balance), 2) AS avg_balance, COUNT(DISTINCT d.customer_id) AS n_customers FROM deciles d JOIN accounts a ON d.customer_id = a.customer_id WHERE a.status = 'active' GROUP BY d.income_decile ORDER BY d.income_decile;"
+  },
+  {
+    "id": "fs35",
+    "category": "retention_xsell",
+    "question": "Among customers who took a home loan, what percentage also have an FD?",
+    "sql": "WITH home_loan_custs AS (SELECT DISTINCT l.customer_id FROM loans l JOIN products p ON l.product_id = p.product_id WHERE p.product_type = 'home_loan'), with_fd AS (SELECT DISTINCT customer_id FROM deposits) SELECT ROUND(100.0 * COUNT(DISTINCT CASE WHEN wf.customer_id IS NOT NULL THEN hl.customer_id END) / COUNT(DISTINCT hl.customer_id), 2) AS pct_with_fd, COUNT(DISTINCT hl.customer_id) AS n_home_loan_customers FROM home_loan_custs hl LEFT JOIN with_fd wf ON hl.customer_id = wf.customer_id;"
+  }
+]
